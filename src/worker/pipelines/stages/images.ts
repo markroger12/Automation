@@ -76,6 +76,9 @@ export function tigramImagesStage(progress = 62): PipelineStage {
 
 type CelebImagesData = ImagesData & { pictures?: GalleryPicture[]; photoChecked?: boolean; notes?: string[] };
 
+/** The image search brought back nothing usable. Retried like any failure; the last attempt goes on without pictures. */
+class NoPicturesError extends Error {}
+
 async function collectGallery(ctx: PipelineContext): Promise<GalleryPicture[]> {
   let answer;
   try {
@@ -86,7 +89,7 @@ async function collectGallery(ctx: PipelineContext): Promise<GalleryPicture[]> {
     try {
       answer = await ctx.askChatGPT('IMAGES', 'image_search', {}, { gallery: true, newChat: true, fresh: true, label: 'Image search (new chat)' });
     } catch (err2) {
-      if (err2 instanceof NoImagesError) throw new Error('ChatGPT answered the image search with text only, twice. No pictures could be collected.');
+      if (err2 instanceof NoImagesError) throw new NoPicturesError('ChatGPT answered the image search with text only, twice. No pictures could be collected.');
       throw err2;
     }
   }
@@ -116,7 +119,7 @@ async function collectGallery(ctx: PipelineContext): Promise<GalleryPicture[]> {
       // not a picture
     }
   }
-  if (!pics.length) throw new Error('The image search gave no usable pictures.');
+  if (!pics.length) throw new NoPicturesError('The image search gave no usable pictures.');
 
   if (faceToolAvailable()) {
     try {
@@ -206,7 +209,13 @@ export function celebrityImagesStage(progress = 68): PipelineStage {
 
       let ordered = prev.pictures;
       if (!ordered?.length) {
-        ordered = await collectGallery(ctx);
+        try {
+          ordered = await collectGallery(ctx);
+        } catch (err) {
+          // A finished article is not thrown away for missing pictures: the last attempt saves it without them.
+          if (!(err instanceof NoPicturesError) || ctx.attempt <= ctx.settings.retryAttempts) throw err;
+          return { outcome: 'completed', data: { featured: null, body: [], pictures: [] }, reviewReasons: [`${err.message} Add pictures by hand or regenerate the Images stage.`], message: 'No usable pictures' };
+        }
         await ctx.saveProgress({ pictures: ordered, photoChecked: false });
       }
       let checked = !!prev.photoChecked;

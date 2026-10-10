@@ -22,7 +22,7 @@ async function runQueued(taskId: string) {
 describe('pipeline engine with Celebrity Writer 1.0', () => {
   beforeAll(async () => {
     await seedPrompts();
-    await saveSettings({ retryAttempts: 1, minKeywordOccurrences: 5, maxKeywordOccurrences: 20 });
+    await saveSettings({ retryAttempts: 1, minKeywordOccurrences: 5, maxKeywordOccurrences: 20, articleImages: false });
   });
   afterAll(async () => {
     await prisma.$disconnect();
@@ -56,8 +56,9 @@ describe('pipeline engine with Celebrity Writer 1.0', () => {
     const order = done.stages.map((s) => `${s.key}:${s.status}`);
     expect(order).toContain('FINAL_ARTICLE:COMPLETED');
     expect(order).toContain('WORDPRESS_DRAFT:SKIPPED');
-    // titles, research, long, final, FAQs, Quick Bio, external links
-    expect(await prisma.chatGPTResponse.count({ where: { taskId: task.id } })).toBe(7);
+    // titles, research, long, final, FAQs, Quick Bio, external links, humanizer
+    const asked = await prisma.chatGPTResponse.findMany({ where: { taskId: task.id }, orderBy: { createdAt: 'asc' } });
+    expect(asked.map((r) => r.stageKey)).toEqual(['TITLES', 'RESEARCH', 'LONG_ARTICLE', 'FINAL_ARTICLE', 'FAQS', 'QUICK_BIO', 'EXTERNAL_LINKS', 'HUMANIZE']);
   }, 120_000);
 
   it('pauses for title approval and continues without asking again', async () => {

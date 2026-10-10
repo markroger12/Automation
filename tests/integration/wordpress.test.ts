@@ -42,7 +42,7 @@ describe.skipIf(!target?.executablePath)('WordPress automation against a fake Wo
     const { seedPrompts } = await import('@/server/prompts');
     const { saveSettings } = await import('@/server/settings');
     await seedPrompts();
-    await saveSettings({ retryAttempts: 0, minKeywordOccurrences: 3, maxKeywordOccurrences: 30, rankMathTargetScore: 75, browserMode: 'headless' });
+    await saveSettings({ retryAttempts: 0, minKeywordOccurrences: 3, maxKeywordOccurrences: 30, rankMathTargetScore: 75, browserMode: 'headless', articleImages: false });
     const site = await prisma.website.create({
       data: { name: 'Fake Site', url: wp.url, adminUrl: `${wp.url}/wp-admin`, language: 'English', profile: { create: { name: 'Fake Site', directory: `fake-${Date.now()}` } } },
       include: { profile: true },

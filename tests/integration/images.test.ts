@@ -147,4 +147,25 @@ describe.skipIf(!target?.executablePath)('article images', () => {
     const meta = await sharp(fs.readFileSync(path.join(DATA_DIR, data.featured.path))).metadata();
     expect([meta.width, meta.height, meta.format]).toEqual([1920, 1080, 'webp']);
   }, 240_000);
+
+  it('Celebrity: an image search with no usable pictures does not throw the article away', async () => {
+    const tiny = await jpeg(120, 120, '#999999');
+    const ext = startFakeExtension((p, job) => {
+      if (job.expect === 'gallery') return { text: 'Photos', images: [{ base64: tiny, width: 120, height: 120 }] };
+      return { text: celebrityAnswer(p) };
+    });
+    const { createArticleTask } = await import('@/server/tasks');
+    const task = await createArticleTask({ moduleKey: 'celebrity-writer', keyword: 'Jenna Ortega', targetCountry: 'United States', language: 'English', websiteId });
+    const done = await runQueued(task.id);
+    await ext.stop();
+
+    const stage = done.stages.find((s) => s.key === 'IMAGES')!;
+    expect(stage.status).toBe('COMPLETED');
+    const data = JSON.parse(stage.data!) as { featured: unknown; body: unknown[]; __review?: string[] };
+    expect(data.featured).toBeNull();
+    expect(data.body).toHaveLength(0);
+    expect((data.__review ?? []).join(' ')).toMatch(/no usable pictures.*regenerate the Images stage/);
+    // The article went on to assembly.
+    expect(done.stages.find((s) => s.key === 'ASSEMBLY')!.status).toBe('COMPLETED');
+  }, 240_000);
 });
