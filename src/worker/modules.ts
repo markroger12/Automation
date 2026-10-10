@@ -1,6 +1,7 @@
 import type { QueueRunner } from './queue-runner';
 import { closeIdleProfiles } from './browser/profiles';
 import './wordpress/control-handlers';
+import './images/preview';
 
 /**
  * Hook for feature modules (WordPress profiles, workflows, humanizer test page) to register their control
