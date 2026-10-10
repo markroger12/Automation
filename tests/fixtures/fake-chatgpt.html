@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ChatGPT</title>
+    <style>
+      body { font: 15px system-ui, sans-serif; margin: 0; }
+      main { max-width: 760px; margin: 0 auto; padding: 16px 16px 160px; }
+      .user-message-bubble-color { background: #f1f1f1; border-radius: 16px; padding: 8px 14px; margin: 16px 0 16px auto; max-width: 80%; white-space: pre-wrap; }
+      [data-message-author-role='user'] { white-space: pre-wrap; background: #eef; padding: 8px; margin: 12px 0; }
+      .markdown { margin: 8px 0; }
+      .turn-action-controls { display: flex; gap: 6px; margin-bottom: 20px; }
+      form { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; padding: 12px; border-top: 1px solid #ddd; }
+      #prompt-textarea { min-height: 40px; max-height: 200px; overflow: auto; border: 1px solid #ccc; border-radius: 12px; padding: 8px; white-space: pre-wrap; }
+      .chip { display: inline-flex; gap: 4px; border: 1px solid #ccc; border-radius: 8px; padding: 2px 6px; margin: 4px; font-size: 12px; }
+      .gallery img { width: 120px; height: 90px; object-fit: cover; margin: 4px; cursor: pointer; }
+      [role='dialog'] { position: fixed; inset: 40px; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; }
+      [role='dialog'] img { max-width: 80%; max-height: 80%; }
+      .gen img { width: 512px; }
+    </style>
+  </head>
+  <body>
+    <main id="thread"></main>
+    <div id="login-zone"></div>
+    <form id="composer-form">
+      <div id="attachments"></div>
+      <div id="prompt-textarea" class="ProseMirror" contenteditable="true"></div>
+      <input type="file" id="upload" multiple style="display: none" />
+      <button type="button" data-testid="send-button" aria-label="Send prompt" disabled>Send</button>
+      <button type="button" data-testid="stop-button" aria-label="Stop streaming" style="display: none">Stop</button>
+    </form>
+    <script>
+      (function () {
+        var FAKE = window.__FAKE || { mode: 'markers' };
+        var thread = document.getElementById('thread');
+        var composer = document.getElementById('prompt-textarea');
+        var sendBtn = document.querySelector('[data-testid="send-button"]');
+        var stopBtn = document.querySelector('[data-testid="stop-button"]');
+        var upload = document.getElementById('upload');
+        var attachZone = document.getElementById('attachments');
+        var attached = [];
+        var pastedChips = 0;
+        var convId = null;
+        var pollTimer = null;
+
+        if (FAKE.loggedOut) {
+          document.getElementById('composer-form').remove();
+          document.getElementById('login-zone').innerHTML = '<button data-testid="login-button">Log in</button>';
+          return;
+        }
+
+        function esc(s) {
+          return String(s).replace(/[&<>]/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
+          });
+        }
+        function md(text) {
+          return text
+            .split(/\n{2,}/)
+            .map(function (block) {
+              if (/^## /.test(block)) return '<h2>' + esc(block.slice(3)) + '</h2>';
+              if (/^### /.test(block)) return '<h3>' + esc(block.slice(4)) + '</h3>';
+              return '<p>' + esc(block).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') + '</p>';
+            })
+            .join('');
+        }
+        function updateSend() {
+          var hasText = composer.innerText.trim().length > 0 || attached.length > 0;
+          sendBtn.disabled = !hasText;
+        }
+        composer.addEventListener('input', updateSend);
+        composer.addEventListener('paste', function (e) {
+          var text = e.clipboardData && e.clipboardData.getData('text/plain');
+          e.preventDefault();
+          if (!text) return;
+          if (text.length > 8000) {
+            // Like ChatGPT: a long paste becomes an attachment chip instead of text.
+            pastedChips++;
+            var chip = document.createElement('div');
+            chip.className = 'chip attachment';
+            chip.innerHTML = '<span>Pasted text.txt</span><button type="button" aria-label="Remove file">x</button>';
+            chip.querySelector('button').onclick = function () {
+              chip.remove();
+              pastedChips--;
+            };
+            attachZone.appendChild(chip);
+            return;
+          }
+          document.execCommand('insertText', false, text);
+          updateSend();
+        });
+        upload.addEventListener('change', function () {
+          Array.prototype.forEach.call(upload.files, function (f) {
+            attached.push(f.name);
+            var img = document.createElement('img');
+            img.width = 40;
+            img.height = 40;
+            img.alt = f.name;
+            img.src = URL.createObjectURL(f);
+            attachZone.appendChild(img);
+          });
+          sendBtn.disabled = true;
+          setTimeout(updateSend, 600); // "uploading"
+        });
+
+        sendBtn.addEventListener('click', function () {
+          if (sendBtn.disabled) return;
+          var prompt = composer.innerText;
+          var files = attached.slice();
+          var chips = attachZone.querySelectorAll('.chip').length;
+          composer.innerHTML = '';
+          attachZone.innerHTML = '';
+          attached = [];
+          updateSend();
+          var isNew = !convId;
+          if (isNew) history.pushState({}, '', '/c/local-chatgpt:' + Math.random().toString(16).slice(2) + '-0000-0000');
+          fetch('/backend-api/f/conversation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: convId, prompt: prompt, attachments: files, pastedChips: chips }),
+          })
+            .then(function (r) {
+              return r.json();
+            })
+            .then(function (r) {
+              convId = r.conversationId;
+              setTimeout(function () {
+                if (isNew) history.replaceState({}, '', '/c/' + convId);
+              }, 400);
+              poll();
+            });
+        });
+        stopBtn.addEventListener('click', function () {
+          if (convId) fetch('/backend-api/fake/stop/' + convId, { method: 'POST' });
+        });
+
+        function render(state) {
+          var html = '';
+          state.messages.forEach(function (m) {
+            if (m.role === 'user') {
+              if (FAKE.mode === 'markers') html += '<div data-message-author-role="user">' + esc(m.text) + '</div>';
+              else html += '<div class="user-message-bubble-color">' + esc(m.text) + '</div>';
+              return;
+            }
+            if (m.role !== 'assistant') return;
+            var body = FAKE.mode === 'shell-page' ? '' : md(m.text);
+            if (m.images && m.images.length) {
+              if (m.gallery) {
+                body += '<div class="gallery">' + m.images.map(function (src, i) {
+                  return '<img alt="photo ' + (i + 1) + '" src="' + src + '" data-index="' + i + '">';
+                }).join('') + '</div>';
+              } else if (m.status === 'finished_successfully') {
+                body += '<div class="gen">' + m.images.map(function (src) {
+                  return '<img alt="Generated image" src="' + src + '">';
+                }).join('') + '</div>';
+              }
+            }
+            if (FAKE.mode === 'markers') html += '<div data-message-author-role="assistant"><div class="markdown">' + body + '</div></div>';
+            else html += '<div class="agent-turn"><div class="markdown prose">' + body + '</div></div>';
+            if (m.status === 'finished_successfully' && m.last) {
+              html += '<div class="turn-action-controls"><button data-testid="copy-turn-action-button" aria-label="Copy">Copy</button></div>';
+            }
+          });
+          if (thread.innerHTML !== html) thread.innerHTML = html;
+          stopBtn.style.display = state.generating ? '' : 'none';
+          sendBtn.style.display = state.generating ? 'none' : '';
+          document.querySelectorAll('.gallery img').forEach(function (img) {
+            img.onclick = function () {
+              openGallery(state.messages.filter(function (m) { return m.gallery; }).pop().images, Number(img.dataset.index));
+            };
+          });
+        }
+
+        function openGallery(images, index) {
+          var d = document.querySelector('[role="dialog"]');
+          if (!d) {
+            d = document.createElement('div');
+            d.setAttribute('role', 'dialog');
+            document.body.appendChild(d);
+          }
+          d.innerHTML = '<img src="' + images[index] + '"><button aria-label="Next image">Next</button><button aria-label="Close">x</button>';
+          var next = d.querySelector('[aria-label="Next image"]');
+          if (index >= images.length - 1) next.disabled = true;
+          next.onclick = function () {
+            openGallery(images, index + 1);
+          };
+          d.querySelector('[aria-label="Close"]').onclick = function () {
+            d.remove();
+          };
+        }
+
+        function poll() {
+          clearTimeout(pollTimer);
+          if (!convId) return;
+          fetch('/backend-api/fake/state/' + convId)
+            .then(function (r) {
+              return r.status === 404 ? null : r.json();
+            })
+            .then(function (state) {
+              if (!state) {
+                thread.innerHTML = '<div class="error">Unable to load conversation</div>';
+                return;
+              }
+              render(state);
+              pollTimer = setTimeout(poll, 300);
+            });
+        }
+
+        var m = /\/c\/([A-Za-z0-9-]+)$/.exec(location.pathname);
+        if (m) {
+          convId = m[1];
+          poll();
+        }
+        updateSend();
+      })();
+    </script>
+  </body>
+</html>

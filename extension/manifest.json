@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Blog Automation Studio — ChatGPT Worker",
+  "short_name": "ChatGPT Worker",
+  "version": "1.0.0",
+  "description": "Sends the article prompts of Blog Automation Studio on chatgpt.com and reports the answers to your local app.",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "tabs", "notifications", "alarms"],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://images.openai.com/*",
+    "https://*.oaiusercontent.com/*",
+    "https://*.mm.bing.net/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["lib/shared.js", "content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost/*", "http://127.0.0.1/*"],
+      "js": ["page-bridge.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ChatGPT Worker",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}
