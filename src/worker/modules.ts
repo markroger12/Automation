@@ -1,4 +1,5 @@
-import type { QueueRunner } from './queue-runner';
+import { startQueueRunner, type QueueRunner } from './queue-runner';
+import { handleHumanizerJob } from './humanizer/test-runner';
 import { closeIdleProfiles } from './browser/profiles';
 import './wordpress/control-handlers';
 import './images/preview';
@@ -10,7 +11,7 @@ import './images/preview';
 export function registerWorkerModules(): void {}
 
 export function extraRunners(): QueueRunner[] {
-  return [];
+  return [startQueueRunner({ queue: 'humanizer', concurrency: () => 1, handle: (job) => handleHumanizerJob(job), heartbeatMs: 10_000 })];
 }
 
 export function extraTicks(): { name: string; ms: number; fn: () => Promise<void> }[] {
