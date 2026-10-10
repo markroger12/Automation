@@ -56,7 +56,8 @@ describe('pipeline engine with Celebrity Writer 1.0', () => {
     const order = done.stages.map((s) => `${s.key}:${s.status}`);
     expect(order).toContain('FINAL_ARTICLE:COMPLETED');
     expect(order).toContain('WORDPRESS_DRAFT:SKIPPED');
-    expect(await prisma.chatGPTResponse.count({ where: { taskId: task.id } })).toBe(6);
+    // titles, research, long, final, FAQs, Quick Bio, external links
+    expect(await prisma.chatGPTResponse.count({ where: { taskId: task.id } })).toBe(7);
   }, 120_000);
 
   it('pauses for title approval and continues without asking again', async () => {
