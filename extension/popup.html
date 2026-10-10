@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ChatGPT Worker</title>
+    <style>
+      body { font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; width: 330px; margin: 0; color: #111827; }
+      header { background: #2753e6; color: #fff; padding: 10px 14px; font-weight: 600; display: flex; justify-content: space-between; }
+      main { padding: 12px 14px; }
+      label { display: block; font-weight: 600; margin: 10px 0 4px; }
+      input[type="text"], input[type="password"] { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font: inherit; }
+      .row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+      .row label { margin: 0; font-weight: 500; }
+      button { margin-top: 12px; width: 100%; padding: 7px; border: 0; border-radius: 6px; background: #2753e6; color: #fff; font-weight: 600; cursor: pointer; }
+      button.secondary { background: #f3f4f6; color: #111827; border: 1px solid #d1d5db; }
+      .status { margin-top: 12px; padding: 8px; border-radius: 6px; background: #f9fafb; border: 1px solid #e5e7eb; font-size: 12px; }
+      .ok { color: #047857; }
+      .bad { color: #b91c1c; }
+      .muted { color: #6b7280; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header><span>ChatGPT Worker</span><span id="version"></span></header>
+    <main>
+      <label for="appUrl">App address</label>
+      <input id="appUrl" type="text" placeholder="http://localhost:3000" />
+      <label for="key">Connection key</label>
+      <input id="key" type="password" placeholder="bas_… (Settings → Create connection key)" />
+      <div class="muted">Leave the key empty to keep the saved one.</div>
+      <div class="row"><input id="paused" type="checkbox" /><label for="paused">Pause automatic start</label></div>
+      <div class="row"><input id="windows" type="checkbox" /><label for="windows">Open each ChatGPT tab in its own window</label></div>
+      <div class="row"><input id="automation" type="checkbox" /><label for="automation">This is the Automation Chrome</label></div>
+      <button id="save">Save and connect</button>
+      <button id="refresh" class="secondary">Check now</button>
+      <div class="status" id="status">Loading…</div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
