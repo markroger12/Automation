@@ -103,7 +103,9 @@ export function WebsitesView() {
                 <Td>{w._count.categories}</Td>
                 <Td>{w._count.tasks}</Td>
                 <Td>
-                  {w.workflow?.isActive ? <Badge color="green">on</Badge> : <Badge>off</Badge>}
+                  <Link href={`/workflow?website=${w.id}`} title="Open the workflow">
+                    {w.workflow?.isActive ? <Badge color="green">on</Badge> : <Badge>off</Badge>}
+                  </Link>
                   {w.canPublish && <Badge color="yellow" className="ml-1">may publish</Badge>}
                 </Td>
               </tr>

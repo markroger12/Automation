@@ -14,10 +14,13 @@ export const GET = route<{ id: string }>(async ({ params }) => {
   return { website };
 });
 
-export const PUT = route<{ id: string }>(async ({ req, params }) => {
+export const PUT = route<{ id: string }>(async ({ req, params, user }) => {
   const input = await readJson(req, websiteInputSchema.partial());
   const current = await prisma.website.findUnique({ where: { id: params.id } });
   if (!current) throw new ApiError(404, 'Website not found.');
+  if (input.canPublish !== undefined && input.canPublish !== current.canPublish && user.role !== 'ADMIN') {
+    throw new ApiError(403, 'Only an admin can change whether a website may publish by itself.');
+  }
   if (input.defaultCategoryId) {
     const cat = await prisma.category.findFirst({ where: { id: input.defaultCategoryId, websiteId: params.id } });
     if (!cat) throw new ApiError(400, 'That category does not belong to this website.');
