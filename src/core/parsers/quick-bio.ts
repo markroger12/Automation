@@ -46,7 +46,7 @@ export function parseQuickBio(input: string, limit = 30): BioRow[] {
     if (rows.length) return rows.slice(0, limit);
   }
   for (const l of lines) {
-    const m = /^(?:[-*•]\s*)?\**([^:*|]{2,50}?)\**\s*[:：]\s*(.+)$/.exec(l);
+    const m = /^(?:[-*•]\s*)?\**([^:*|]{2,50}?)\**\s*[:：]\s*\**\s*(.+?)\s*$/.exec(l);
     if (m) addRow(rows, m[1]!, m[2]!);
   }
   return rows.slice(0, limit);

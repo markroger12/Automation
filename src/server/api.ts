@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { ZodError, type ZodType } from 'zod';
+import { ZodError, type ZodTypeAny, type output } from 'zod';
 import { getSessionUser, type SessionUser } from './auth';
 import { writeLog, errorMessage } from './log';
 
@@ -66,7 +66,7 @@ export function formatZodError(err: ZodError): string {
     .join('; ');
 }
 
-export async function readJson<T>(req: NextRequest, schema: ZodType<T>): Promise<T> {
+export async function readJson<S extends ZodTypeAny>(req: NextRequest, schema: S): Promise<output<S>> {
   let body: unknown;
   try {
     body = await req.json();

@@ -9,13 +9,15 @@ function profileDirName(name: string): string {
   return `${base || 'site'}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export const GET = route(async () => {
+export const GET = route(async ({ req }) => {
+  const withCategories = req.nextUrl.searchParams.get('withCategories') === '1';
   const websites = await prisma.website.findMany({
     orderBy: { name: 'asc' },
     include: {
       profile: true,
       _count: { select: { categories: true, tasks: true } },
       workflow: { select: { isActive: true } },
+      ...(withCategories ? { categories: { select: { id: true, name: true }, orderBy: { name: 'asc' as const } } } : {}),
     },
   });
   return { websites };
