@@ -30,7 +30,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['sharp', 'playwright', 'playwright-core', 'bcryptjs', '@prisma/client'],
   devIndicators: false,
-  eslint: { ignoreDuringBuilds: true },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

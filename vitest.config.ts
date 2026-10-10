@@ -12,6 +12,5 @@ export default defineConfig({
     hookTimeout: 120_000,
     // Browser tests start a real Chrome; keep files sequential so they do not fight for CPU.
     fileParallelism: true,
-    poolOptions: { forks: { singleFork: false } },
   },
 });
