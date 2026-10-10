@@ -2,7 +2,7 @@ import type { Prisma, QueueJob } from '@prisma/client';
 import { prisma } from './db';
 import { parseJson } from '@/lib/json';
 
-export type QueueName = 'article' | 'chatgpt' | 'control' | 'workflow' | 'humanizer';
+export type QueueName = 'article' | 'chatgpt' | 'control' | 'workflow' | 'humanizer' | 'plagiarism';
 
 export type EnqueueOptions = { taskId?: string | null; runAt?: Date };
 
@@ -108,7 +108,7 @@ export async function recoverJobs(): Promise<{ requeued: number; failed: number 
     data: { status: 'WAITING', lockedBy: null, heartbeatAt: null, startedAt: null, runAt: now },
   });
   const failedOthers = await prisma.queueJob.updateMany({
-    where: { queue: { in: ['control', 'workflow', 'humanizer'] }, status: 'ACTIVE' },
+    where: { queue: { in: ['control', 'workflow', 'humanizer', 'plagiarism'] }, status: 'ACTIVE' },
     data: { status: 'FAILED', error: 'The worker stopped while this job was running.', finishedAt: now },
   });
   const failedChat = await prisma.queueJob.updateMany({

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ExternalLink, MessageSquare, RotateCcw, Send, Square, Trash2, Gauge } from 'lucide-react';
+import { ArrowLeft, ExternalLink, MessageSquare, RotateCcw, Send, Square, Trash2, Gauge, ScanSearch } from 'lucide-react';
 import { api } from '@/lib/client-fetch';
 import { STATUS_LABEL, isActiveStatus, statusColor } from '@/lib/status';
 import type { ArticleDetail } from '@/lib/article-types';
@@ -119,6 +119,13 @@ export function ArticleView({ id }: { id: string }) {
           <Button size="sm" icon={<Gauge className="h-4 w-4" />} onClick={() => action('seo-check')} loading={busy === 'seo-check'} disabled={!task.bodyHtml}>
             Run SEO check
           </Button>
+          {task.bodyHtml && (
+            <Link href={`/plagiarism?task=${task.id}`}>
+              <Button size="sm" icon={<ScanSearch className="h-4 w-4" />}>
+                Check plagiarism
+              </Button>
+            </Link>
+          )}
           {task.website && task.bodyHtml && (
             <Button size="sm" variant="primary" icon={<Send className="h-4 w-4" />} onClick={() => action('send-to-wordpress', {}, 'Sending to WordPress — the worker creates or updates the draft.')} loading={busy === 'send-to-wordpress'} disabled={working}>
               Send to WordPress
